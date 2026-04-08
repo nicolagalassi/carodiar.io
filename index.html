@@ -171,7 +171,6 @@
 
     <script>
         /** --- CONFIGURAZIONE GOOGLE DRIVE API --- **/
-        // Inserite credenziali fisse
         const CLIENT_ID = '662737937491-or1uo1ui8eohrf7il2s8cve0in8pu4od.apps.googleusercontent.com'; 
         const API_KEY = 'AIzaSyBJ9w0ilvQohKTO1agou-xs3-_ogyz2iIk';
         
@@ -194,7 +193,6 @@
                 client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { 
                     if (resp.error) throw (resp); 
                     
-                    // Salvataggio del token in memoria per persistenza al refresh
                     const expiresAt = Date.now() + (resp.expires_in * 1000);
                     localStorage.setItem('gdrive_token', resp.access_token);
                     localStorage.setItem('gdrive_token_expires', expiresAt.toString());
@@ -207,16 +205,13 @@
 
         function checkAuthReady() { 
             if(gapiInited && gisInited) {
-                // Controllo se esiste un token valido salvato in memoria
                 const savedToken = localStorage.getItem('gdrive_token');
                 const expiresAt = localStorage.getItem('gdrive_token_expires');
 
                 if (savedToken && expiresAt && Date.now() < parseInt(expiresAt)) {
-                    // Token ancora valido, re-iniettiamo nelle API senza chiedere login
                     gapi.client.setToken({ access_token: savedToken });
                     updateCloudUI(true);
                 } else {
-                    // Token inesistente o scaduto
                     localStorage.removeItem('gdrive_token');
                     localStorage.removeItem('gdrive_token_expires');
                     updateCloudUI(false);
@@ -335,14 +330,14 @@
                     pagesView.appendChild(curGrid); curDate = dateStr;
                 }
                 const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-card border border-gray-100 dark:border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-all rounded-2xl p-5 h-48 flex flex-col cursor-pointer group shadow-sm';
+                card.className = 'note-card bg-white dark:bg-card border border-gray-100 dark:border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-all rounded-2xl p-5 h-48 flex flex-col cursor-pointer group shadow-sm';
                 card.onclick = () => openPage(p.id);
                 card.innerHTML = `
                     <div class="font-serif text-lg text-gray-900 dark:text-gray-200 truncate mb-1">${p.title || 'Senza Titolo'}</div>
                     <div class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed flex-grow overflow-hidden line-clamp-4 font-playfair">${escapeHTML(p.content) || '<span class="opacity-30 italic font-sans text-xs">Vuota</span>'}</div>
                     <div class="mt-3 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 dark:border-gray-800 pt-3">
                         <span>${new Date(p.timestamp).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})}</span>
-                        <button onclick="event.stopPropagation(); showConfirm('Eliminare la pagina?', ()=>deletePage('${p.id}'))" class="opacity-0 group-hover:opacity-100 text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">Elimina</button>
+                        <button onclick="event.stopPropagation(); showConfirm('Eliminare la pagina?', ()=>deletePage('${p.id}'))" class="opacity-0 group-hover:opacity-100 text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex-shrink-0">Elimina</button>
                     </div>`;
                 curGrid.appendChild(card);
             });
@@ -362,7 +357,6 @@
         function openNewPage() { const journal = journals.find(j=>j.id===activeJournalId); if(!journal) return; const id = Date.now().toString(); journal.pages.push({id, title:'', content:'', timestamp:Date.now()}); openPage(id); }
         function openPage(id) { currentPageId = id; const p = journals.find(j=>j.id===activeJournalId).pages.find(pg=>pg.id===id); editorTitle.value = p.title; editorContent.value = p.content; editorDatetime.value = new Date(p.timestamp - (new Date().getTimezoneOffset()*60000)).toISOString().slice(0,16); showEditor(); }
         
-        // Risolto bug click sfondo
         function showEditor() { 
             document.body.classList.add('modal-open'); 
             editorBackdrop.classList.remove('opacity-0', 'pointer-events-none'); 
@@ -381,6 +375,7 @@
             currentPageId = null; 
         }
 
+        // Il Listener per chiudere la modale cliccando sullo sfondo
         editorBackdrop.addEventListener('click', (e) => {
             if (e.target === editorBackdrop) {
                 closeEditor();
@@ -433,11 +428,16 @@
         
         document.getElementById('modal-confirm').onclick = () => { confirmCallback(); document.getElementById('modal-cancel').onclick(); };
 
-        window.onclick = (e) => { 
-            if(!e.target.closest('.note-card') && !e.target.closest('header') && !e.target.closest('#editor-container') && !e.target.closest('#modal-box') && activeJournalId) {
-                openNewPage(); 
+        // RISOLTO: Ora l'apertura di una nuova nota avviene SOLAMENTE se si clicca sullo sfondo della griglia principale,
+        // evitando conflitti con la chiusura del modale o dei menù a tendina.
+        pagesView.addEventListener('click', (e) => {
+            if (document.body.classList.contains('modal-open')) return; // Previene l'apertura se c'è un modale aperto
+            if (e.target.closest('.note-card')) return; // Previene l'apertura se si clicca su una nota esistente
+            
+            if (activeJournalId) {
+                openNewPage();
             }
-        };
+        });
 
         renderApp();
     </script>
