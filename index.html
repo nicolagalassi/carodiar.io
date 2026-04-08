@@ -113,13 +113,13 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14"></path></svg> Accedi a Google
                     </button>
                     <button id="signout_btn" onclick="handleSignoutClick()" class="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center gap-2 hidden">
-                         Esci
+                         Esci dal Cloud
                     </button>
                     <hr class="border-gray-100 dark:border-gray-700 my-1">
-                    <button id="save_drive_btn" onclick="saveToDrive()" class="w-full px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg flex items-center gap-2 disabled:opacity-30" disabled>
+                    <button id="save_drive_btn" onclick="saveToDrive()" class="w-full px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
                         Backup su Cloud
                     </button>
-                    <button id="load_drive_btn" onclick="loadFromDrive()" class="w-full px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg flex items-center gap-2 disabled:opacity-30" disabled>
+                    <button id="load_drive_btn" onclick="loadFromDrive()" class="w-full px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
                         Ripristina da Cloud
                     </button>
                 </div>
@@ -141,15 +141,18 @@
         Diario vuoto.<br>Clicca nello spazio vuoto per aggiungere una pagina.
     </div>
 
-    <div id="editor-backdrop" class="fixed inset-0 bg-black/20 dark:bg-black/80 backdrop-blur-sm z-40 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="editor-backdrop" class="fixed inset-0 bg-black/40 dark:bg-black/80 backdrop-blur-sm z-40 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
         <div id="editor-container" class="bg-white dark:bg-dark border border-gray-200 dark:border-gray-800 w-full max-w-2xl h-[75vh] rounded-2xl flex flex-col p-6 md:p-10 shadow-2xl transform scale-95 transition-all duration-300 relative">
-            <div class="absolute top-5 right-5">
-                <button id="editor-delete-btn" class="text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors">
+            
+            <div class="flex justify-between items-center mb-4 border-b border-transparent">
+                <input type="datetime-local" id="editor-datetime" class="bg-transparent text-gray-500 font-medium text-xs md:text-sm outline-none cursor-pointer hover:text-gray-900 dark:hover:text-gray-300 border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 pb-1 transition-colors">
+                
+                <button id="editor-delete-btn" onclick="triggerDeletePage(event)" class="text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors flex-shrink-0" title="Elimina pagina">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </div>
+
             <div class="flex flex-col flex-grow">
-                <input type="datetime-local" id="editor-datetime" class="bg-transparent text-gray-500 font-medium text-xs md:text-sm outline-none cursor-pointer mb-3">
                 <input type="text" id="editor-title" placeholder="Titolo della pagina..." class="bg-transparent border-none text-gray-900 dark:text-white font-serif text-3xl md:text-4xl outline-none mb-6 w-full placeholder-gray-300 dark:placeholder-gray-700 py-1">
                 <textarea id="editor-content" placeholder="Inizia a scrivere..." class="bg-transparent border-none text-gray-700 dark:text-gray-300 font-normal text-xl md:text-2xl leading-[1.7] outline-none resize-none flex-grow w-full placeholder-gray-300 dark:placeholder-gray-700 font-playfair"></textarea>
             </div>
@@ -167,7 +170,8 @@
     </div>
 
     <script>
-        /** --- CONFIGURAZIONE GOOGLE (DA COMPILARE) --- **/
+        /** --- CONFIGURAZIONE GOOGLE DRIVE API --- **/
+        // Inserite credenziali fisse
         const CLIENT_ID = '662737937491-or1uo1ui8eohrf7il2s8cve0in8pu4od.apps.googleusercontent.com'; 
         const API_KEY = 'AIzaSyBJ9w0ilvQohKTO1agou-xs3-_ogyz2iIk';
         
@@ -179,20 +183,46 @@
         let gisInited = false;
 
         function gapiLoaded() { gapi.load('client', async () => {
-            if(API_KEY === 'INSERISCI_LA_TUA_API_KEY') return;
+            if(!API_KEY) return;
             await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
             gapiInited = true; checkAuthReady();
         });}
 
         function gisLoaded() {
-            if(CLIENT_ID === 'INSERISCI_IL_TUO_CLIENT_ID_OAUTH') return;
+            if(!CLIENT_ID) return;
             tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { if (resp.error) throw (resp); updateCloudUI(true); },
+                client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { 
+                    if (resp.error) throw (resp); 
+                    
+                    // Salvataggio del token in memoria per persistenza al refresh
+                    const expiresAt = Date.now() + (resp.expires_in * 1000);
+                    localStorage.setItem('gdrive_token', resp.access_token);
+                    localStorage.setItem('gdrive_token_expires', expiresAt.toString());
+                    
+                    checkAuthReady(); 
+                },
             });
             gisInited = true; checkAuthReady();
         }
 
-        function checkAuthReady() { if(gapiInited && gisInited) updateCloudUI(gapi.client.getToken() !== null); }
+        function checkAuthReady() { 
+            if(gapiInited && gisInited) {
+                // Controllo se esiste un token valido salvato in memoria
+                const savedToken = localStorage.getItem('gdrive_token');
+                const expiresAt = localStorage.getItem('gdrive_token_expires');
+
+                if (savedToken && expiresAt && Date.now() < parseInt(expiresAt)) {
+                    // Token ancora valido, re-iniettiamo nelle API senza chiedere login
+                    gapi.client.setToken({ access_token: savedToken });
+                    updateCloudUI(true);
+                } else {
+                    // Token inesistente o scaduto
+                    localStorage.removeItem('gdrive_token');
+                    localStorage.removeItem('gdrive_token_expires');
+                    updateCloudUI(false);
+                }
+            } 
+        }
 
         function updateCloudUI(isAuthed) {
             document.getElementById('auth_btn').classList.toggle('hidden', isAuthed);
@@ -203,7 +233,17 @@
         }
 
         function handleAuthClick() { tokenClient.requestAccessToken({prompt: gapi.client.getToken() === null ? 'consent' : ''}); }
-        function handleSignoutClick() { const token = gapi.client.getToken(); if (token) { google.accounts.oauth2.revoke(token.access_token); gapi.client.setToken(''); updateCloudUI(false); } }
+        
+        function handleSignoutClick() { 
+            const token = gapi.client.getToken(); 
+            if (token) { 
+                google.accounts.oauth2.revoke(token.access_token); 
+                gapi.client.setToken(''); 
+            }
+            localStorage.removeItem('gdrive_token');
+            localStorage.removeItem('gdrive_token_expires');
+            updateCloudUI(false); 
+        }
 
         const BACKUP_NAME = 'carodiario_backup.json';
 
@@ -220,20 +260,27 @@
 
                 const url = fileId ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
                 const res = await fetch(url, { method: fileId ? 'PATCH' : 'POST', headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }, body: form });
-                if (res.ok) alert("Backup sincronizzato!"); else throw new Error();
-            } catch (e) { alert("Errore durante il backup."); }
+                if (res.ok) alert("Backup sincronizzato con successo su Google Drive!"); else throw new Error();
+            } catch (e) { alert("Errore durante il backup. La sessione potrebbe essere scaduta, prova a rifare il login."); }
         }
 
         async function loadFromDrive() {
-            showConfirm("Questo sovrascriverà i dati locali. Procedere?", async () => {
+            showConfirm("Questo sovrascriverà tutti i tuoi dati attuali. Procedere?", async () => {
                 try {
                     const list = await gapi.client.drive.files.list({ spaces: 'appDataFolder', q: `name='${BACKUP_NAME}'` });
-                    if (list.result.files.length === 0) return alert("Nessun backup trovato.");
+                    if (list.result.files.length === 0) return alert("Nessun backup trovato su questo account Google.");
                     const response = await gapi.client.drive.files.get({ fileId: list.result.files[0].id, alt: 'media' });
-                    if (Array.isArray(response.result)) { journals = response.result; activeJournalId = journals[0]?.id || null; saveData(); renderApp(); alert("Dati ripristinati!"); }
-                } catch (e) { alert("Errore nel ripristino."); }
+                    if (Array.isArray(response.result)) { 
+                        journals = response.result; 
+                        activeJournalId = journals[0]?.id || null; 
+                        saveData(); 
+                        renderApp(); 
+                        alert("Dati ripristinati correttamente!"); 
+                    }
+                } catch (e) { alert("Errore nel ripristino. Riprova ad effettuare il login."); }
             });
         }
+
 
         /** --- LOGICA CORE APP --- **/
         let journals = JSON.parse(localStorage.getItem('carodiario_data')) || [];
@@ -245,6 +292,7 @@
         const titleInput = document.getElementById('title-input');
         const journalListEl = document.getElementById('journal-list');
         const editorBackdrop = document.getElementById('editor-backdrop');
+        const editorContainer = document.getElementById('editor-container');
         const editorTitle = document.getElementById('editor-title');
         const editorContent = document.getElementById('editor-content');
         const editorDatetime = document.getElementById('editor-datetime');
@@ -294,12 +342,13 @@
                     <div class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed flex-grow overflow-hidden line-clamp-4 font-playfair">${escapeHTML(p.content) || '<span class="opacity-30 italic font-sans text-xs">Vuota</span>'}</div>
                     <div class="mt-3 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 dark:border-gray-800 pt-3">
                         <span>${new Date(p.timestamp).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})}</span>
-                        <button onclick="event.stopPropagation(); showConfirm('Eliminare?', ()=>deletePage('${p.id}'))" class="opacity-0 group-hover:opacity-100 text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">Elimina</button>
+                        <button onclick="event.stopPropagation(); showConfirm('Eliminare la pagina?', ()=>deletePage('${p.id}'))" class="opacity-0 group-hover:opacity-100 text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">Elimina</button>
                     </div>`;
                 curGrid.appendChild(card);
             });
         }
 
+        // Toggles Dropdowns
         function toggleDropdown(e) { e.stopPropagation(); document.getElementById('cloud-dropdown').classList.add('dropdown-hidden'); document.getElementById('journal-dropdown').classList.toggle('dropdown-hidden'); document.getElementById('journal-dropdown').classList.toggle('dropdown-visible'); }
         function toggleCloudDropdown(e) { e.stopPropagation(); document.getElementById('journal-dropdown').classList.add('dropdown-hidden'); document.getElementById('cloud-dropdown').classList.toggle('dropdown-hidden'); document.getElementById('cloud-dropdown').classList.toggle('dropdown-visible'); }
         document.addEventListener('click', () => { document.getElementById('journal-dropdown').classList.add('dropdown-hidden'); document.getElementById('cloud-dropdown').classList.add('dropdown-hidden'); });
@@ -308,29 +357,87 @@
         function createNewJournal() { const id = Date.now().toString(); journals.push({id, title:'Nuovo Diario', timestamp:Date.now(), pages:[]}); selectJournal(id); startEditingTitle(); }
         function startEditingTitle() { document.getElementById('title-view').classList.add('hidden'); document.getElementById('title-edit').classList.remove('hidden'); titleInput.value = journals.find(j=>j.id===activeJournalId).title; titleInput.focus(); }
         titleInput.onblur = () => { if(activeJournalId) { journals.find(j=>j.id===activeJournalId).title = titleInput.value.trim() || 'Senza Titolo'; saveData(); } document.getElementById('title-view').classList.remove('hidden'); document.getElementById('title-edit').classList.add('hidden'); renderApp(); };
-        function deleteActiveJournal() { showConfirm("Eliminare intero diario?", () => { journals = journals.filter(j=>j.id!==activeJournalId); activeJournalId = journals[0]?.id || null; saveData(); renderApp(); }); }
+        function deleteActiveJournal() { showConfirm("Eliminare l'intero diario?", () => { journals = journals.filter(j=>j.id!==activeJournalId); activeJournalId = journals[0]?.id || null; saveData(); renderApp(); }); }
 
         function openNewPage() { const journal = journals.find(j=>j.id===activeJournalId); if(!journal) return; const id = Date.now().toString(); journal.pages.push({id, title:'', content:'', timestamp:Date.now()}); openPage(id); }
         function openPage(id) { currentPageId = id; const p = journals.find(j=>j.id===activeJournalId).pages.find(pg=>pg.id===id); editorTitle.value = p.title; editorContent.value = p.content; editorDatetime.value = new Date(p.timestamp - (new Date().getTimezoneOffset()*60000)).toISOString().slice(0,16); showEditor(); }
-        function showEditor() { document.body.classList.add('modal-open'); editorBackdrop.classList.replace('opacity-0', 'opacity-100'); editorBackdrop.style.pointerEvents = 'auto'; }
-        editorBackdrop.onclick = (e) => { if(e.target === editorBackdrop) { editorBackdrop.classList.replace('opacity-100', 'opacity-0'); editorBackdrop.style.pointerEvents = 'none'; document.body.classList.remove('modal-open'); cleanEmptyPages(); } };
+        
+        // Risolto bug click sfondo
+        function showEditor() { 
+            document.body.classList.add('modal-open'); 
+            editorBackdrop.classList.remove('opacity-0', 'pointer-events-none'); 
+            editorBackdrop.classList.add('opacity-100', 'pointer-events-auto'); 
+            editorContainer.classList.remove('scale-95');
+            editorContainer.classList.add('scale-100');
+        }
+        
+        function closeEditor() { 
+            document.body.classList.remove('modal-open'); 
+            editorBackdrop.classList.remove('opacity-100', 'pointer-events-auto'); 
+            editorBackdrop.classList.add('opacity-0', 'pointer-events-none'); 
+            editorContainer.classList.remove('scale-100');
+            editorContainer.classList.add('scale-95');
+            cleanEmptyPages(); 
+            currentPageId = null; 
+        }
+
+        editorBackdrop.addEventListener('click', (e) => {
+            if (e.target === editorBackdrop) {
+                closeEditor();
+            }
+        });
+
         function deletePage(id) { const j = journals.find(j=>j.id===activeJournalId); j.pages = j.pages.filter(p=>p.id!==id); saveData(); renderApp(); }
+        function triggerDeletePage(e) {
+            e.stopPropagation();
+            showConfirm("Vuoi eliminare questa pagina?", () => {
+                deletePage(currentPageId);
+                closeEditor();
+            });
+        }
         
         function updatePage() { 
+            if(!currentPageId) return;
             const p = journals.find(j=>j.id===activeJournalId).pages.find(pg=>pg.id===currentPageId);
             p.title = editorTitle.value; p.content = editorContent.value; p.timestamp = new Date(editorDatetime.value).getTime();
             saveData(); renderPagesGrid();
         }
         editorTitle.oninput = updatePage; editorContent.oninput = updatePage; editorDatetime.onchange = updatePage;
-        function cleanEmptyPages() { const j = journals.find(j=>j.id===activeJournalId); j.pages = j.pages.filter(p=> p.title.trim() || p.content.trim()); saveData(); renderApp(); }
+        
+        function cleanEmptyPages() { 
+            const j = journals.find(j=>j.id===activeJournalId); 
+            if(!j) return;
+            const initialLength = j.pages.length;
+            j.pages = j.pages.filter(p=> p.title.trim() || p.content.trim()); 
+            if(j.pages.length !== initialLength) { saveData(); renderPagesGrid(); }
+        }
 
         function saveData() { localStorage.setItem('carodiario_data', JSON.stringify(journals)); localStorage.setItem('carodiario_active_id', activeJournalId); }
         function escapeHTML(s) { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
-        function showConfirm(m, cb) { document.getElementById('modal-message').innerText = m; confirmCallback = cb; document.getElementById('custom-modal-backdrop').classList.replace('opacity-0', 'opacity-100'); document.getElementById('custom-modal-backdrop').style.pointerEvents = 'auto'; }
-        document.getElementById('modal-cancel').onclick = () => { document.getElementById('custom-modal-backdrop').classList.replace('opacity-100', 'opacity-0'); document.getElementById('custom-modal-backdrop').style.pointerEvents = 'none'; };
+        
+        function showConfirm(m, cb) { 
+            document.getElementById('modal-message').innerText = m; 
+            confirmCallback = cb; 
+            const modal = document.getElementById('custom-modal-backdrop');
+            modal.classList.remove('opacity-0', 'pointer-events-none'); 
+            modal.classList.add('opacity-100', 'pointer-events-auto'); 
+            document.getElementById('modal-box').classList.replace('scale-95', 'scale-100');
+        }
+        
+        document.getElementById('modal-cancel').onclick = () => { 
+            const modal = document.getElementById('custom-modal-backdrop');
+            modal.classList.remove('opacity-100', 'pointer-events-auto'); 
+            modal.classList.add('opacity-0', 'pointer-events-none'); 
+            document.getElementById('modal-box').classList.replace('scale-100', 'scale-95');
+        };
+        
         document.getElementById('modal-confirm').onclick = () => { confirmCallback(); document.getElementById('modal-cancel').onclick(); };
 
-        window.onclick = (e) => { if(!e.target.closest('.note-card') && !e.target.closest('header') && !e.target.closest('#editor-container') && !e.target.closest('#modal-box') && activeJournalId) openNewPage(); };
+        window.onclick = (e) => { 
+            if(!e.target.closest('.note-card') && !e.target.closest('header') && !e.target.closest('#editor-container') && !e.target.closest('#modal-box') && activeJournalId) {
+                openNewPage(); 
+            }
+        };
 
         renderApp();
     </script>
