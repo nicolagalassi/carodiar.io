@@ -75,6 +75,40 @@
             50% { opacity: 0.4; }
         }
         .syncing { animation: pulse-dot 1s infinite; background-color: #f59e0b !important; }
+
+        /* Note color swatches — muted, desaturated */
+        .note-color-btn {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+            flex-shrink: 0;
+        }
+        .note-color-btn:hover { transform: scale(1.2); }
+        .note-color-btn.active { border-color: rgba(0,0,0,0.35); transform: scale(1.15); }
+        html.dark .note-color-btn.active { border-color: rgba(255,255,255,0.5); }
+
+        /* Light mode card backgrounds */
+        .nc-none  { background-color: #ffffff; }
+        .nc-stone { background-color: #f0ede8; }
+        .nc-rose  { background-color: #f5eaeb; }
+        .nc-sand  { background-color: #f2eedf; }
+        .nc-sage  { background-color: #e6ede8; }
+        .nc-mist  { background-color: #e8edf2; }
+        .nc-lilac { background-color: #eee8f0; }
+
+        /* Dark mode overrides */
+        html.dark .nc-none  { background-color: #1a1a1a; }
+        html.dark .nc-stone { background-color: #201e1b; }
+        html.dark .nc-rose  { background-color: #201818; }
+        html.dark .nc-sand  { background-color: #1f1d14; }
+        html.dark .nc-sage  { background-color: #161d18; }
+        html.dark .nc-mist  { background-color: #151a1f; }
+        html.dark .nc-lilac { background-color: #1a1620; }
+
+        /* Color picker row in editor */
+        #color-picker-row { display: flex; align-items: center; gap: 7px; }
     </style>
 
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
@@ -196,12 +230,25 @@
 
     <!-- EDITOR MODAL -->
     <div id="editor-backdrop" class="fixed inset-0 bg-black/30 dark:bg-black/70 backdrop-blur-sm z-40 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
-        <div id="editor-container" class="bg-white dark:bg-[#141414] border border-gray-200/60 dark:border-gray-800/60 w-full max-w-2xl h-[78vh] rounded-2xl flex flex-col p-7 md:p-10 shadow-2xl transform scale-95 transition-all duration-300 relative">
+        <div id="editor-container" class="nc-none border border-gray-200/60 dark:border-gray-800/60 w-full max-w-2xl h-[78vh] rounded-2xl flex flex-col p-7 md:p-10 shadow-2xl transform scale-95 transition-all duration-300 relative">
             <div class="flex justify-between items-center mb-5">
                 <input type="datetime-local" id="editor-datetime" class="bg-transparent text-gray-400 dark:text-gray-600 font-medium text-xs outline-none cursor-pointer hover:text-gray-700 dark:hover:text-gray-400 transition-colors">
-                <button id="editor-delete-btn" onclick="triggerDeletePage(event)" class="text-gray-300 dark:text-gray-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors flex-shrink-0" title="Elimina pagina">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
+                <div class="flex items-center gap-3">
+                    <!-- Color picker -->
+                    <div id="color-picker-row">
+                        <span class="text-[10px] text-gray-300 dark:text-gray-700 uppercase tracking-wider mr-1 select-none">colore</span>
+                        <button class="note-color-btn nc-none" style="background-color:#e5e5e5" title="Nessuno" onclick="setPageColor('none')"></button>
+                        <button class="note-color-btn" style="background-color:#c9bfb5" title="Stone" onclick="setPageColor('stone')"></button>
+                        <button class="note-color-btn" style="background-color:#d4a8ac" title="Rosa" onclick="setPageColor('rose')"></button>
+                        <button class="note-color-btn" style="background-color:#c8be90" title="Sand" onclick="setPageColor('sand')"></button>
+                        <button class="note-color-btn" style="background-color:#96b89e" title="Sage" onclick="setPageColor('sage')"></button>
+                        <button class="note-color-btn" style="background-color:#93aabf" title="Mist" onclick="setPageColor('mist')"></button>
+                        <button class="note-color-btn" style="background-color:#b19fc0" title="Lilla" onclick="setPageColor('lilac')"></button>
+                    </div>
+                    <button id="editor-delete-btn" onclick="triggerDeletePage(event)" class="text-gray-300 dark:text-gray-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors flex-shrink-0" title="Elimina pagina">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
             </div>
             <div class="flex flex-col flex-grow overflow-hidden">
                 <input type="text" id="editor-title" placeholder="Titolo..." class="bg-transparent border-none text-gray-900 dark:text-white font-serif text-3xl md:text-4xl outline-none mb-5 w-full placeholder-gray-200 dark:placeholder-gray-800 py-1">
@@ -556,7 +603,8 @@
                     curDate = dateStr;
                 }
                 const card = document.createElement('div');
-                card.className = 'note-card bg-white dark:bg-card border border-gray-100 dark:border-transparent hover:border-gray-200 dark:hover:border-gray-800 transition-all rounded-2xl p-5 h-44 flex flex-col cursor-pointer group shadow-sm hover:shadow-md';
+                const colorClass = p.color ? `nc-${p.color}` : 'nc-none';
+                card.className = `note-card ${colorClass} border border-gray-100 dark:border-transparent hover:border-gray-200 dark:hover:border-gray-800 transition-all rounded-2xl p-5 h-44 flex flex-col cursor-pointer group shadow-sm hover:shadow-md`;
                 card.onclick = () => openPage(p.id);
                 card.innerHTML = `
                     <div class="font-serif text-base text-gray-900 dark:text-gray-200 truncate mb-1.5">${escapeHTML(p.title) || '<span class="text-gray-300 dark:text-gray-700 font-sans text-sm italic">Senza titolo</span>'}</div>
@@ -641,7 +689,30 @@
             editorTitle.value = p.title;
             editorContent.value = p.content;
             editorDatetime.value = new Date(p.timestamp - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            applyEditorColor(p.color || 'none');
             showEditor();
+        }
+
+        const COLOR_CLASSES = ['nc-none','nc-stone','nc-rose','nc-sand','nc-sage','nc-mist','nc-lilac'];
+
+        function applyEditorColor(color) {
+            const container = document.getElementById('editor-container');
+            COLOR_CLASSES.forEach(c => container.classList.remove(c));
+            container.classList.add(`nc-${color}`);
+            // Update active swatch
+            document.querySelectorAll('#color-picker-row .note-color-btn').forEach((btn, i) => {
+                const names = ['none','stone','rose','sand','sage','mist','lilac'];
+                btn.classList.toggle('active', names[i] === color);
+            });
+        }
+
+        function setPageColor(color) {
+            if (!currentPageId) return;
+            const p = journals.find(j => j.id === activeJournalId).pages.find(pg => pg.id === currentPageId);
+            p.color = color;
+            applyEditorColor(color);
+            saveData();
+            renderPagesGrid();
         }
 
         function showEditor() {
@@ -658,6 +729,8 @@
             editorBackdrop.classList.add('opacity-0', 'pointer-events-none');
             editorContainer.classList.remove('scale-100');
             editorContainer.classList.add('scale-95');
+            // Reset colore editor al bianco/dark default
+            COLOR_CLASSES.forEach(c => editorContainer.classList.remove(c));
             cleanEmptyPages();
             currentPageId = null;
         }
