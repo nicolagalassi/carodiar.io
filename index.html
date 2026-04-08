@@ -11,10 +11,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>carodiar.io</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -23,9 +23,9 @@
             theme: {
                 extend: {
                     colors: {
-                        dark: '#121212',
-                        card: '#1e1e1e',
-                        lightBg: '#f9fafb',
+                        dark: '#111111',
+                        card: '#1a1a1a',
+                        lightBg: '#f8f7f4',
                     },
                     fontFamily: {
                         sans: ['"Fira Sans"', 'sans-serif'],
@@ -37,21 +37,44 @@
         }
     </script>
     <style>
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        html.dark ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #2a2a2a; }
         body.modal-open { overflow: hidden; }
-        
+
         #journal-dropdown, #cloud-dropdown {
             transform-origin: top center;
-            transition: transform 0.2s ease, opacity 0.2s ease;
+            transition: transform 0.18s ease, opacity 0.18s ease;
         }
-        .dropdown-hidden { transform: scale(0.95) translateY(-10px) translateX(-50%); opacity: 0; pointer-events: none; }
+        .dropdown-hidden { transform: scale(0.95) translateY(-8px) translateX(-50%); opacity: 0; pointer-events: none; }
         .dropdown-visible { transform: scale(1) translateY(0) translateX(-50%); opacity: 1; pointer-events: auto; }
-        
-        /* Prevenzione taglio font Serif */
-        .font-playfair, .font-serif { line-height: 1.4; padding-bottom: 0.1em; }
+
+        .font-playfair, .font-serif { line-height: 1.45; padding-bottom: 0.1em; }
+
+        /* Toast notification */
+        #toast {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        #toast.show {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
+        /* Subtle paper texture for cards */
+        .note-card {
+            background-image: none;
+        }
+        html:not(.dark) .note-card {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+        }
+
+        /* Animazione per il cloud status */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .syncing { animation: pulse-dot 1s infinite; background-color: #f59e0b !important; }
     </style>
 
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
@@ -59,164 +82,204 @@
 </head>
 <body class="bg-lightBg dark:bg-dark text-gray-800 dark:text-gray-200 font-sans antialiased h-screen flex flex-col overflow-hidden transition-colors duration-300">
 
-    <header class="grid grid-cols-3 items-center px-6 py-4 md:px-12 border-b border-gray-200 dark:border-gray-800 z-30 shrink-0 bg-white/80 dark:bg-dark/80 backdrop-blur-md">
-        
+    <!-- HEADER -->
+    <header class="grid grid-cols-3 items-center px-6 py-4 md:px-10 border-b border-gray-200/80 dark:border-gray-800/80 z-30 shrink-0 bg-lightBg/90 dark:bg-dark/90 backdrop-blur-md">
+
         <div class="flex items-center">
             <div class="text-2xl md:text-3xl font-serif tracking-wide lowercase select-none">
-                <span class="text-gray-900 dark:text-gray-100">caro</span><span class="text-gray-400 dark:text-gray-500">diar.io</span>
+                <span class="text-gray-900 dark:text-gray-100">caro</span><span class="text-gray-400 dark:text-gray-600">diar.io</span>
             </div>
         </div>
 
         <div class="flex items-center justify-center relative">
             <div id="title-view" class="flex items-center gap-1 md:gap-2">
-                <button id="dropdown-toggle" class="text-lg md:text-xl font-bold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1 rounded-lg focus:outline-none" onclick="toggleDropdown(event)">
-                    <span id="current-title-text" class="truncate max-w-[120px] md:max-w-[300px]">Diario Vuoto</span>
-                    <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <button id="dropdown-toggle" class="text-base md:text-lg font-semibold text-gray-900 dark:text-white hover:text-gray-500 dark:hover:text-gray-300 transition-colors flex items-center gap-1 rounded-lg focus:outline-none" onclick="toggleDropdown(event)">
+                    <span id="current-title-text" class="truncate max-w-[110px] md:max-w-[280px]">Diario Vuoto</span>
+                    <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div class="flex items-center">
-                    <button id="edit-title-btn" onclick="startEditingTitle()" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors hidden" title="Modifica titolo">
-                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    <button id="edit-title-btn" onclick="startEditingTitle()" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-600 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors hidden" title="Modifica titolo">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     </button>
-                    <button onclick="createNewJournal()" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors" title="Crea nuovo diario">
-                        <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <button onclick="createNewJournal()" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-600 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors" title="Crea nuovo diario">
+                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </button>
                 </div>
             </div>
 
             <div id="title-edit" class="hidden items-center">
-                <input type="text" id="title-input" class="bg-transparent text-lg md:text-xl font-bold text-gray-900 dark:text-white outline-none border-b-2 border-gray-300 focus:border-gray-900 dark:border-gray-600 dark:focus:border-white w-[150px] md:w-[250px] text-center" placeholder="Nome diario...">
+                <input type="text" id="title-input" class="bg-transparent text-base md:text-lg font-semibold text-gray-900 dark:text-white outline-none border-b-2 border-gray-300 focus:border-gray-900 dark:border-gray-600 dark:focus:border-white w-[140px] md:w-[240px] text-center" placeholder="Nome diario...">
             </div>
 
-            <div id="journal-dropdown" class="absolute top-full left-1/2 mt-3 w-64 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl flex-col z-50 dropdown-hidden">
-                <div class="px-4 py-3 text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wider border-b border-gray-100 dark:border-gray-700 text-center uppercase">I Tuoi Diari</div>
-                <ul id="journal-list" class="max-h-60 overflow-y-auto p-2 space-y-1"></ul>
-                <div id="dropdown-delete-section" class="border-t border-gray-100 dark:border-gray-700 p-2 hidden">
+            <!-- Journal Dropdown -->
+            <div id="journal-dropdown" class="absolute top-full left-1/2 mt-3 w-64 bg-white dark:bg-card border border-gray-200 dark:border-gray-700/80 rounded-2xl shadow-xl flex-col z-50 dropdown-hidden overflow-hidden">
+                <div class="px-4 py-2.5 text-[10px] font-semibold text-gray-400 dark:text-gray-600 tracking-widest border-b border-gray-100 dark:border-gray-800 text-center uppercase">I Tuoi Diari</div>
+                <ul id="journal-list" class="max-h-56 overflow-y-auto p-1.5 space-y-0.5"></ul>
+                <div id="dropdown-delete-section" class="border-t border-gray-100 dark:border-gray-800 p-1.5 hidden">
                     <button onclick="deleteActiveJournal()" class="w-full text-left px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         Elimina Diario
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 md:gap-4 text-sm text-gray-500 relative">
-            
-            <button onclick="toggleCloudDropdown(event)" class="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-full transition-colors relative" title="Google Drive Sync">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-                <span id="cloud-status-indicator" class="absolute top-1 right-1 w-2 h-2 bg-gray-300 rounded-full"></span>
+        <!-- Right Actions -->
+        <div class="flex items-center justify-end gap-2 md:gap-3 relative">
+
+            <!-- Cloud Button -->
+            <button onclick="toggleCloudDropdown(event)" class="p-2 text-blue-500 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-full transition-colors relative" title="Google Drive & Backup">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                <span id="cloud-status-indicator" class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
             </button>
 
-            <div id="cloud-dropdown" class="absolute top-full right-12 mt-3 w-64 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl flex-col z-50 dropdown-hidden">
-                <div class="px-4 py-3 text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">GOOGLE DRIVE</div>
-                <div class="p-2 space-y-1 text-center">
-                    <button id="auth_btn" onclick="handleAuthClick()" class="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14"></path></svg> Accedi a Google
+            <!-- Cloud Dropdown -->
+            <div id="cloud-dropdown" class="absolute top-full right-0 mt-3 w-72 bg-white dark:bg-card border border-gray-200 dark:border-gray-700/80 rounded-2xl shadow-xl z-50 dropdown-hidden overflow-hidden">
+                <div class="px-4 py-2.5 text-[10px] font-semibold text-gray-400 dark:text-gray-600 tracking-widest border-b border-gray-100 dark:border-gray-800 text-center uppercase">Backup & Sync</div>
+
+                <!-- Google Drive Section -->
+                <div class="p-2 space-y-1 border-b border-gray-100 dark:border-gray-800">
+                    <p class="text-[10px] text-gray-400 dark:text-gray-600 px-3 pt-1 uppercase tracking-wider font-semibold">Google Drive</p>
+                    <button id="auth_btn" onclick="handleAuthClick()" class="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl flex items-center gap-2.5 transition-colors">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                        Accedi a Google
                     </button>
-                    <button id="signout_btn" onclick="handleSignoutClick()" class="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center gap-2 hidden">
-                         Esci dal Cloud
+                    <button id="signout_btn" onclick="handleSignoutClick()" class="w-full px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl flex items-center gap-2.5 transition-colors hidden">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        <span id="signout-label">Esci dal Cloud</span>
                     </button>
-                    <hr class="border-gray-100 dark:border-gray-700 my-1">
-                    <button id="save_drive_btn" onclick="saveToDrive()" class="w-full px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                    <button id="save_drive_btn" onclick="saveToDrive()" class="w-full px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl flex items-center gap-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                         Backup su Cloud
                     </button>
-                    <button id="load_drive_btn" onclick="loadFromDrive()" class="w-full px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                    <button id="load_drive_btn" onclick="loadFromDrive()" class="w-full px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl flex items-center gap-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>
                         Ripristina da Cloud
                     </button>
                 </div>
+
+                <!-- Manual Backup Section -->
+                <div class="p-2 space-y-1">
+                    <p class="text-[10px] text-gray-400 dark:text-gray-600 px-3 pt-1 uppercase tracking-wider font-semibold">Backup Manuale</p>
+                    <button onclick="exportJSON()" class="w-full px-3 py-2 text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-xl flex items-center gap-2.5 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                        Esporta come JSON
+                    </button>
+                    <label class="w-full px-3 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Importa da JSON
+                        <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+                    </label>
+                </div>
             </div>
 
-            <button onclick="toggleTheme()" class="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors">
-                <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-600 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors">
+                <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
             </button>
         </div>
     </header>
 
-    <main id="pages-view" class="flex-grow p-8 md:p-12 w-full overflow-y-auto relative transition-colors duration-300"></main>
+    <!-- MAIN VIEW -->
+    <main id="pages-view" class="flex-grow px-6 py-8 md:px-10 md:py-10 w-full overflow-y-auto relative transition-colors duration-300"></main>
 
-    <div id="no-journals-hint" class="fixed inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600 text-lg pointer-events-none hidden">
-        Clicca sul '+' in alto per creare un diario.
+    <!-- Empty Hints -->
+    <div id="no-journals-hint" class="fixed inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-700 pointer-events-none hidden" style="margin-top:60px">
+        <svg class="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        <span class="text-base">Clicca sul '+' in alto per creare un diario.</span>
     </div>
-    <div id="empty-journal-hint" class="fixed inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600 text-lg pointer-events-none hidden mt-20">
-        Diario vuoto.<br>Clicca nello spazio vuoto per aggiungere una pagina.
+    <div id="empty-journal-hint" class="fixed inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-700 pointer-events-none hidden" style="margin-top:60px">
+        <svg class="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+        <span class="text-base">Diario vuoto. Clicca nello spazio per aggiungere una pagina.</span>
     </div>
 
-    <div id="editor-backdrop" class="fixed inset-0 bg-black/40 dark:bg-black/80 backdrop-blur-sm z-40 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
-        <div id="editor-container" class="bg-white dark:bg-dark border border-gray-200 dark:border-gray-800 w-full max-w-2xl h-[75vh] rounded-2xl flex flex-col p-6 md:p-10 shadow-2xl transform scale-95 transition-all duration-300 relative">
-            
-            <div class="flex justify-between items-center mb-4 border-b border-transparent">
-                <input type="datetime-local" id="editor-datetime" class="bg-transparent text-gray-500 font-medium text-xs md:text-sm outline-none cursor-pointer hover:text-gray-900 dark:hover:text-gray-300 border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 pb-1 transition-colors">
-                
-                <button id="editor-delete-btn" onclick="triggerDeletePage(event)" class="text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors flex-shrink-0" title="Elimina pagina">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+    <!-- EDITOR MODAL -->
+    <div id="editor-backdrop" class="fixed inset-0 bg-black/30 dark:bg-black/70 backdrop-blur-sm z-40 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="editor-container" class="bg-white dark:bg-[#141414] border border-gray-200/60 dark:border-gray-800/60 w-full max-w-2xl h-[78vh] rounded-2xl flex flex-col p-7 md:p-10 shadow-2xl transform scale-95 transition-all duration-300 relative">
+            <div class="flex justify-between items-center mb-5">
+                <input type="datetime-local" id="editor-datetime" class="bg-transparent text-gray-400 dark:text-gray-600 font-medium text-xs outline-none cursor-pointer hover:text-gray-700 dark:hover:text-gray-400 transition-colors">
+                <button id="editor-delete-btn" onclick="triggerDeletePage(event)" class="text-gray-300 dark:text-gray-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors flex-shrink-0" title="Elimina pagina">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </div>
-
-            <div class="flex flex-col flex-grow">
-                <input type="text" id="editor-title" placeholder="Titolo della pagina..." class="bg-transparent border-none text-gray-900 dark:text-white font-serif text-3xl md:text-4xl outline-none mb-6 w-full placeholder-gray-300 dark:placeholder-gray-700 py-1">
-                <textarea id="editor-content" placeholder="Inizia a scrivere..." class="bg-transparent border-none text-gray-700 dark:text-gray-300 font-normal text-xl md:text-2xl leading-[1.7] outline-none resize-none flex-grow w-full placeholder-gray-300 dark:placeholder-gray-700 font-playfair"></textarea>
+            <div class="flex flex-col flex-grow overflow-hidden">
+                <input type="text" id="editor-title" placeholder="Titolo..." class="bg-transparent border-none text-gray-900 dark:text-white font-serif text-3xl md:text-4xl outline-none mb-5 w-full placeholder-gray-200 dark:placeholder-gray-800 py-1">
+                <textarea id="editor-content" placeholder="Inizia a scrivere..." class="bg-transparent border-none text-gray-600 dark:text-gray-300 text-lg md:text-xl leading-[1.75] outline-none resize-none flex-grow w-full placeholder-gray-200 dark:placeholder-gray-800 font-playfair overflow-y-auto"></textarea>
             </div>
         </div>
     </div>
 
-    <div id="custom-modal-backdrop" class="fixed inset-0 bg-black/30 dark:bg-black/90 z-50 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-200">
-        <div class="bg-white dark:bg-card p-8 rounded-xl text-center max-w-sm w-full border border-gray-200 dark:border-gray-700 shadow-2xl transform scale-95 transition-all duration-200" id="modal-box">
-            <p id="modal-message" class="text-base text-gray-800 dark:text-gray-200 mb-6">Sei sicuro?</p>
-            <div class="flex justify-center gap-4">
-                <button id="modal-cancel" class="px-5 py-2 text-sm rounded-lg font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Annulla</button>
-                <button id="modal-confirm" class="px-5 py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg">Conferma</button>
+    <!-- CONFIRM MODAL -->
+    <div id="custom-modal-backdrop" class="fixed inset-0 bg-black/20 dark:bg-black/80 z-50 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white dark:bg-card p-8 rounded-2xl text-center max-w-xs w-full border border-gray-100 dark:border-gray-800 shadow-2xl transform scale-95 transition-all duration-200" id="modal-box">
+            <p id="modal-message" class="text-sm text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">Sei sicuro?</p>
+            <div class="flex justify-center gap-3">
+                <button id="modal-cancel" class="px-5 py-2 text-sm rounded-xl font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Annulla</button>
+                <button id="modal-confirm" class="px-5 py-2 text-sm rounded-xl font-medium text-white bg-red-500 hover:bg-red-600 transition-colors">Conferma</button>
             </div>
         </div>
     </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm px-5 py-3 rounded-full shadow-xl opacity-0 pointer-events-none z-[100] transform translate-y-2 font-medium"></div>
 
     <script>
-        /** --- CONFIGURAZIONE GOOGLE DRIVE API --- **/
-        const CLIENT_ID = '662737937491-or1uo1ui8eohrf7il2s8cve0in8pu4od.apps.googleusercontent.com'; 
+        /** ==============================
+         *  GOOGLE DRIVE API
+         * ============================== */
+        const CLIENT_ID = '662737937491-or1uo1ui8eohrf7il2s8cve0in8pu4od.apps.googleusercontent.com';
         const API_KEY = 'AIzaSyBJ9w0ilvQohKTO1agou-xs3-_ogyz2iIk';
-        
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+        const BACKUP_NAME = 'carodiario_backup.json';
 
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
 
-        function gapiLoaded() { gapi.load('client', async () => {
-            if(!API_KEY) return;
-            await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
-            gapiInited = true; checkAuthReady();
-        });}
+        function gapiLoaded() {
+            gapi.load('client', async () => {
+                if (!API_KEY) return;
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
+                gapiInited = true;
+                checkAuthReady();
+            });
+        }
 
         function gisLoaded() {
-            if(!CLIENT_ID) return;
+            if (!CLIENT_ID) return;
             tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { 
-                    if (resp.error) throw (resp); 
-                    
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (resp) => {
+                    if (resp.error) { console.error(resp); showToast('Errore di autenticazione Google.', true); return; }
                     const expiresAt = Date.now() + (resp.expires_in * 1000);
                     localStorage.setItem('gdrive_token', resp.access_token);
                     localStorage.setItem('gdrive_token_expires', expiresAt.toString());
-                    
-                    checkAuthReady(); 
+                    gapi.client.setToken({ access_token: resp.access_token });
+                    updateCloudUI(true);
+                    showToast('Connesso a Google Drive ✓');
                 },
             });
-            gisInited = true; checkAuthReady();
+            gisInited = true;
+            checkAuthReady();
         }
 
-        function checkAuthReady() { 
-            if(gapiInited && gisInited) {
+        function checkAuthReady() {
+            if (gapiInited && gisInited) {
                 const savedToken = localStorage.getItem('gdrive_token');
                 const expiresAt = localStorage.getItem('gdrive_token_expires');
-
                 if (savedToken && expiresAt && Date.now() < parseInt(expiresAt)) {
                     gapi.client.setToken({ access_token: savedToken });
                     updateCloudUI(true);
+                    // Aggiorna l'etichetta con l'utente se disponibile
                 } else {
                     localStorage.removeItem('gdrive_token');
                     localStorage.removeItem('gdrive_token_expires');
                     updateCloudUI(false);
                 }
-            } 
+            }
         }
 
         function updateCloudUI(isAuthed) {
@@ -224,63 +287,208 @@
             document.getElementById('signout_btn').classList.toggle('hidden', !isAuthed);
             document.getElementById('save_drive_btn').disabled = !isAuthed;
             document.getElementById('load_drive_btn').disabled = !isAuthed;
-            document.getElementById('cloud-status-indicator').className = `absolute top-1 right-1 w-2 h-2 rounded-full ${isAuthed ? 'bg-green-500' : 'bg-gray-400'}`;
+            const dot = document.getElementById('cloud-status-indicator');
+            dot.className = `absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${isAuthed ? 'bg-emerald-500' : 'bg-gray-300'}`;
+            dot.classList.remove('syncing');
         }
 
-        function handleAuthClick() { tokenClient.requestAccessToken({prompt: gapi.client.getToken() === null ? 'consent' : ''}); }
-        
-        function handleSignoutClick() { 
-            const token = gapi.client.getToken(); 
-            if (token) { 
-                google.accounts.oauth2.revoke(token.access_token); 
-                gapi.client.setToken(''); 
+        function handleAuthClick() {
+            if (!tokenClient) { showToast('API Google non ancora caricata, riprova.', true); return; }
+            const currentToken = gapi.client.getToken();
+            tokenClient.requestAccessToken({ prompt: currentToken === null ? 'consent' : '' });
+        }
+
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token) {
+                google.accounts.oauth2.revoke(token.access_token, () => {});
+                gapi.client.setToken('');
             }
             localStorage.removeItem('gdrive_token');
             localStorage.removeItem('gdrive_token_expires');
-            updateCloudUI(false); 
+            updateCloudUI(false);
+            showToast('Disconnesso da Google Drive.');
         }
 
-        const BACKUP_NAME = 'carodiario_backup.json';
+        /** FIX PRINCIPALE: usa fetch diretto invece di gapi.client per upload/download
+         *  gapi.client non gestisce correttamente il multipart upload né il download con alt=media */
+        async function getValidToken() {
+            const savedToken = localStorage.getItem('gdrive_token');
+            const expiresAt = localStorage.getItem('gdrive_token_expires');
+            if (savedToken && expiresAt && Date.now() < parseInt(expiresAt) - 60000) {
+                return savedToken;
+            }
+            // Token scaduto: richiedi il refresh
+            return new Promise((resolve, reject) => {
+                tokenClient.callback = (resp) => {
+                    if (resp.error) { reject(resp); return; }
+                    const newExpiry = Date.now() + (resp.expires_in * 1000);
+                    localStorage.setItem('gdrive_token', resp.access_token);
+                    localStorage.setItem('gdrive_token_expires', newExpiry.toString());
+                    gapi.client.setToken({ access_token: resp.access_token });
+                    resolve(resp.access_token);
+                };
+                tokenClient.requestAccessToken({ prompt: '' });
+            });
+        }
 
         async function saveToDrive() {
+            const indicator = document.getElementById('cloud-status-indicator');
+            indicator.classList.add('syncing');
             try {
-                const list = await gapi.client.drive.files.list({ spaces: 'appDataFolder', q: `name='${BACKUP_NAME}'` });
-                const fileId = list.result.files.length > 0 ? list.result.files[0].id : null;
-                const metadata = { name: BACKUP_NAME, mimeType: 'application/json', parents: ['appDataFolder'] };
-                const fileContent = JSON.stringify(journals);
+                const token = await getValidToken();
 
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', new Blob([fileContent], { type: 'application/json' }));
+                // Cerca file esistente
+                const listRes = await fetch(
+                    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${BACKUP_NAME}%27&fields=files(id)`,
+                    { headers: { Authorization: 'Bearer ' + token } }
+                );
+                const listData = await listRes.json();
+                const fileId = listData.files && listData.files.length > 0 ? listData.files[0].id : null;
 
-                const url = fileId ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
-                const res = await fetch(url, { method: fileId ? 'PATCH' : 'POST', headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }, body: form });
-                if (res.ok) alert("Backup sincronizzato con successo su Google Drive!"); else throw new Error();
-            } catch (e) { alert("Errore durante il backup. La sessione potrebbe essere scaduta, prova a rifare il login."); }
+                const fileContent = JSON.stringify({ version: 1, exportDate: new Date().toISOString(), journals });
+
+                if (fileId) {
+                    // PATCH: aggiorna solo il contenuto (metadata già settati)
+                    const patchRes = await fetch(
+                        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+                        {
+                            method: 'PATCH',
+                            headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+                            body: fileContent
+                        }
+                    );
+                    if (!patchRes.ok) throw new Error(await patchRes.text());
+                } else {
+                    // POST: crea nuovo file in appDataFolder con multipart
+                    const metadata = { name: BACKUP_NAME, mimeType: 'application/json', parents: ['appDataFolder'] };
+                    const boundary = 'backup_boundary_carodiario';
+                    const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${fileContent}\r\n--${boundary}--`;
+
+                    const postRes = await fetch(
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+                        {
+                            method: 'POST',
+                            headers: {
+                                Authorization: 'Bearer ' + token,
+                                'Content-Type': `multipart/related; boundary=${boundary}`
+                            },
+                            body
+                        }
+                    );
+                    if (!postRes.ok) throw new Error(await postRes.text());
+                }
+
+                updateCloudUI(true);
+                showToast('Backup salvato su Google Drive ✓');
+            } catch (e) {
+                console.error('saveToDrive error:', e);
+                updateCloudUI(!!localStorage.getItem('gdrive_token'));
+                showToast('Errore nel backup. Riprova o rifai il login.', true);
+            }
         }
 
         async function loadFromDrive() {
-            showConfirm("Questo sovrascriverà tutti i tuoi dati attuali. Procedere?", async () => {
+            showConfirm("Questo sovrascriverà tutti i dati locali. Procedere?", async () => {
+                const indicator = document.getElementById('cloud-status-indicator');
+                indicator.classList.add('syncing');
                 try {
-                    const list = await gapi.client.drive.files.list({ spaces: 'appDataFolder', q: `name='${BACKUP_NAME}'` });
-                    if (list.result.files.length === 0) return alert("Nessun backup trovato su questo account Google.");
-                    const response = await gapi.client.drive.files.get({ fileId: list.result.files[0].id, alt: 'media' });
-                    if (Array.isArray(response.result)) { 
-                        journals = response.result; 
-                        activeJournalId = journals[0]?.id || null; 
-                        saveData(); 
-                        renderApp(); 
-                        alert("Dati ripristinati correttamente!"); 
+                    const token = await getValidToken();
+
+                    // Lista il file
+                    const listRes = await fetch(
+                        `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${BACKUP_NAME}%27&fields=files(id)`,
+                        { headers: { Authorization: 'Bearer ' + token } }
+                    );
+                    const listData = await listRes.json();
+
+                    if (!listData.files || listData.files.length === 0) {
+                        updateCloudUI(true);
+                        showToast('Nessun backup trovato su questo account.', true);
+                        return;
                     }
-                } catch (e) { alert("Errore nel ripristino. Riprova ad effettuare il login."); }
+
+                    // Scarica il contenuto direttamente con fetch (alt=media)
+                    const fileId = listData.files[0].id;
+                    const dlRes = await fetch(
+                        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+                        { headers: { Authorization: 'Bearer ' + token } }
+                    );
+                    if (!dlRes.ok) throw new Error(await dlRes.text());
+
+                    const parsed = await dlRes.json();
+
+                    // Supporta sia il formato nuovo { version, journals } sia il vecchio array diretto
+                    const data = Array.isArray(parsed) ? parsed : (parsed.journals || []);
+
+                    if (!Array.isArray(data)) throw new Error('Formato backup non valido.');
+
+                    journals = data;
+                    activeJournalId = journals[0]?.id || null;
+                    saveData();
+                    renderApp();
+                    updateCloudUI(true);
+                    showToast('Dati ripristinati da Google Drive ✓');
+                } catch (e) {
+                    console.error('loadFromDrive error:', e);
+                    updateCloudUI(!!localStorage.getItem('gdrive_token'));
+                    showToast('Errore nel ripristino. Riprova.', true);
+                }
             });
         }
 
 
-        /** --- LOGICA CORE APP --- **/
+        /** ==============================
+         *  EXPORT / IMPORT JSON
+         * ============================== */
+        function exportJSON() {
+            const payload = { version: 1, exportDate: new Date().toISOString(), journals };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `carodiario_backup_${date}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Backup JSON esportato ✓');
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    // Supporta sia { version, journals } sia array diretto
+                    const data = Array.isArray(parsed) ? parsed : (parsed.journals || null);
+                    if (!Array.isArray(data)) throw new Error('Struttura non valida');
+
+                    showConfirm("Importare il backup? Sostituirà tutti i dati attuali.", () => {
+                        journals = data;
+                        activeJournalId = journals[0]?.id || null;
+                        saveData();
+                        renderApp();
+                        showToast('Dati importati correttamente ✓');
+                    });
+                } catch (err) {
+                    showToast('File non valido o corrotto.', true);
+                }
+            };
+            reader.readAsText(file);
+            // Reset input so same file can be re-imported
+            event.target.value = '';
+        }
+
+
+        /** ==============================
+         *  CORE APP LOGIC
+         * ============================== */
         let journals = JSON.parse(localStorage.getItem('carodiario_data')) || [];
         let activeJournalId = localStorage.getItem('carodiario_active_id') || null;
-        let currentPageId = null; let confirmCallback = null;
+        let currentPageId = null;
+        let confirmCallback = null;
 
         const pagesView = document.getElementById('pages-view');
         const currentTitleText = document.getElementById('current-title-text');
@@ -297,146 +505,239 @@
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         }
 
+        // Toast
+        let toastTimeout;
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.backgroundColor = isError ? '#ef4444' : '';
+            toast.style.color = isError ? 'white' : '';
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
         function renderApp() { renderHeader(); renderPagesGrid(); }
 
         function renderHeader() {
             const journal = journals.find(j => j.id === activeJournalId);
-            currentTitleText.innerText = journal?.title || "Nessun Diario";
+            currentTitleText.innerText = journal?.title || 'Nessun Diario';
             document.getElementById('edit-title-btn').classList.toggle('hidden', !journal);
             document.getElementById('dropdown-delete-section').classList.toggle('hidden', !journal);
-            
-            journalListEl.innerHTML = journals.sort((a,b) => b.timestamp - a.timestamp).map(j => `
-                <li onclick="selectJournal('${j.id}')" class="px-3 py-2 rounded-lg cursor-pointer truncate text-sm font-medium ${j.id === activeJournalId ? 'bg-gray-900 text-white dark:bg-gray-800' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}">
-                    ${j.title || 'Senza Titolo'}
-                </li>`).join('') || '<li class="text-center text-xs text-gray-400 py-2 italic">Nessun diario</li>';
+
+            journalListEl.innerHTML = journals
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .map(j => `
+                    <li onclick="selectJournal('${j.id}')" class="px-3 py-2 rounded-xl cursor-pointer truncate text-sm ${j.id === activeJournalId ? 'bg-gray-900 text-white dark:bg-gray-800 dark:text-white font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}">
+                        ${escapeHTML(j.title) || 'Senza Titolo'}
+                    </li>`).join('') || '<li class="text-center text-xs text-gray-400 py-2 italic">Nessun diario</li>';
         }
 
         function renderPagesGrid() {
             pagesView.innerHTML = '';
             document.getElementById('no-journals-hint').classList.toggle('hidden', journals.length > 0);
             const journal = journals.find(j => j.id === activeJournalId);
-            if(!journal) return;
+            if (!journal) return;
             document.getElementById('empty-journal-hint').classList.toggle('hidden', journal.pages.length > 0);
 
-            const sorted = [...journal.pages].sort((a,b) => b.timestamp - a.timestamp);
+            const sorted = [...journal.pages].sort((a, b) => b.timestamp - a.timestamp);
             let curDate = ''; let curGrid = null;
 
             sorted.forEach(p => {
-                const dateStr = new Date(p.timestamp).toLocaleDateString('it-IT', { day:'numeric', month:'long', year:'numeric'});
-                if(dateStr !== curDate) {
-                    const h = document.createElement('h2'); h.className='w-full text-lg font-light text-gray-400 mt-6 mb-4 border-b border-gray-100 dark:border-gray-800 pb-2';
-                    h.innerText = dateStr; pagesView.appendChild(h);
-                    curGrid = document.createElement('div'); curGrid.className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8';
-                    pagesView.appendChild(curGrid); curDate = dateStr;
+                const dateStr = new Date(p.timestamp).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+                if (dateStr !== curDate) {
+                    const h = document.createElement('h2');
+                    h.className = 'w-full text-xs font-semibold tracking-widest uppercase text-gray-400 dark:text-gray-700 mt-6 mb-3 border-b border-gray-100 dark:border-gray-900 pb-2';
+                    h.innerText = dateStr;
+                    pagesView.appendChild(h);
+                    curGrid = document.createElement('div');
+                    curGrid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6';
+                    pagesView.appendChild(curGrid);
+                    curDate = dateStr;
                 }
                 const card = document.createElement('div');
-                card.className = 'note-card bg-white dark:bg-card border border-gray-100 dark:border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-all rounded-2xl p-5 h-48 flex flex-col cursor-pointer group shadow-sm';
+                card.className = 'note-card bg-white dark:bg-card border border-gray-100 dark:border-transparent hover:border-gray-200 dark:hover:border-gray-800 transition-all rounded-2xl p-5 h-44 flex flex-col cursor-pointer group shadow-sm hover:shadow-md';
                 card.onclick = () => openPage(p.id);
                 card.innerHTML = `
-                    <div class="font-serif text-lg text-gray-900 dark:text-gray-200 truncate mb-1">${p.title || 'Senza Titolo'}</div>
-                    <div class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed flex-grow overflow-hidden line-clamp-4 font-playfair">${escapeHTML(p.content) || '<span class="opacity-30 italic font-sans text-xs">Vuota</span>'}</div>
-                    <div class="mt-3 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 dark:border-gray-800 pt-3">
-                        <span>${new Date(p.timestamp).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})}</span>
-                        <button onclick="event.stopPropagation(); showConfirm('Eliminare la pagina?', ()=>deletePage('${p.id}'))" class="opacity-0 group-hover:opacity-100 text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex-shrink-0">Elimina</button>
+                    <div class="font-serif text-base text-gray-900 dark:text-gray-200 truncate mb-1.5">${escapeHTML(p.title) || '<span class="text-gray-300 dark:text-gray-700 font-sans text-sm italic">Senza titolo</span>'}</div>
+                    <div class="text-gray-500 dark:text-gray-500 text-sm leading-relaxed flex-grow overflow-hidden line-clamp-4 font-playfair">${escapeHTML(p.content) || '<span class="opacity-40 italic font-sans text-xs">Vuota</span>'}</div>
+                    <div class="mt-3 flex justify-between items-center text-[10px] text-gray-300 dark:text-gray-700 border-t border-gray-50 dark:border-gray-800/50 pt-2.5">
+                        <span>${new Date(p.timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <button onclick="event.stopPropagation(); showConfirm('Eliminare la pagina?', ()=>deletePage('${p.id}'))" class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
                     </div>`;
                 curGrid.appendChild(card);
             });
         }
 
-        // Toggles Dropdowns
-        function toggleDropdown(e) { e.stopPropagation(); document.getElementById('cloud-dropdown').classList.add('dropdown-hidden'); document.getElementById('journal-dropdown').classList.toggle('dropdown-hidden'); document.getElementById('journal-dropdown').classList.toggle('dropdown-visible'); }
-        function toggleCloudDropdown(e) { e.stopPropagation(); document.getElementById('journal-dropdown').classList.add('dropdown-hidden'); document.getElementById('cloud-dropdown').classList.toggle('dropdown-hidden'); document.getElementById('cloud-dropdown').classList.toggle('dropdown-visible'); }
-        document.addEventListener('click', () => { document.getElementById('journal-dropdown').classList.add('dropdown-hidden'); document.getElementById('cloud-dropdown').classList.add('dropdown-hidden'); });
+        // Dropdown toggles
+        function toggleDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('cloud-dropdown').classList.add('dropdown-hidden');
+            document.getElementById('cloud-dropdown').classList.remove('dropdown-visible');
+            document.getElementById('journal-dropdown').classList.toggle('dropdown-hidden');
+            document.getElementById('journal-dropdown').classList.toggle('dropdown-visible');
+        }
+        function toggleCloudDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('journal-dropdown').classList.add('dropdown-hidden');
+            document.getElementById('journal-dropdown').classList.remove('dropdown-visible');
+            document.getElementById('cloud-dropdown').classList.toggle('dropdown-hidden');
+            document.getElementById('cloud-dropdown').classList.toggle('dropdown-visible');
+        }
+        document.addEventListener('click', () => {
+            document.getElementById('journal-dropdown').classList.add('dropdown-hidden');
+            document.getElementById('journal-dropdown').classList.remove('dropdown-visible');
+            document.getElementById('cloud-dropdown').classList.add('dropdown-hidden');
+            document.getElementById('cloud-dropdown').classList.remove('dropdown-visible');
+        });
+        document.getElementById('cloud-dropdown').addEventListener('click', e => e.stopPropagation());
+        document.getElementById('journal-dropdown').addEventListener('click', e => e.stopPropagation());
 
         function selectJournal(id) { activeJournalId = id; saveData(); renderApp(); }
-        function createNewJournal() { const id = Date.now().toString(); journals.push({id, title:'Nuovo Diario', timestamp:Date.now(), pages:[]}); selectJournal(id); startEditingTitle(); }
-        function startEditingTitle() { document.getElementById('title-view').classList.add('hidden'); document.getElementById('title-edit').classList.remove('hidden'); titleInput.value = journals.find(j=>j.id===activeJournalId).title; titleInput.focus(); }
-        titleInput.onblur = () => { if(activeJournalId) { journals.find(j=>j.id===activeJournalId).title = titleInput.value.trim() || 'Senza Titolo'; saveData(); } document.getElementById('title-view').classList.remove('hidden'); document.getElementById('title-edit').classList.add('hidden'); renderApp(); };
-        function deleteActiveJournal() { showConfirm("Eliminare l'intero diario?", () => { journals = journals.filter(j=>j.id!==activeJournalId); activeJournalId = journals[0]?.id || null; saveData(); renderApp(); }); }
+        function createNewJournal() {
+            const id = Date.now().toString();
+            journals.push({ id, title: 'Nuovo Diario', timestamp: Date.now(), pages: [] });
+            selectJournal(id);
+            startEditingTitle();
+        }
+        function startEditingTitle() {
+            document.getElementById('title-view').classList.add('hidden');
+            document.getElementById('title-edit').classList.remove('hidden');
+            titleInput.value = journals.find(j => j.id === activeJournalId)?.title || '';
+            titleInput.focus();
+        }
+        titleInput.onblur = () => {
+            if (activeJournalId) {
+                const j = journals.find(j => j.id === activeJournalId);
+                if (j) j.title = titleInput.value.trim() || 'Senza Titolo';
+                saveData();
+            }
+            document.getElementById('title-view').classList.remove('hidden');
+            document.getElementById('title-edit').classList.add('hidden');
+            renderApp();
+        };
+        titleInput.onkeydown = (e) => { if (e.key === 'Enter') titleInput.blur(); };
 
-        function openNewPage() { const journal = journals.find(j=>j.id===activeJournalId); if(!journal) return; const id = Date.now().toString(); journal.pages.push({id, title:'', content:'', timestamp:Date.now()}); openPage(id); }
-        function openPage(id) { currentPageId = id; const p = journals.find(j=>j.id===activeJournalId).pages.find(pg=>pg.id===id); editorTitle.value = p.title; editorContent.value = p.content; editorDatetime.value = new Date(p.timestamp - (new Date().getTimezoneOffset()*60000)).toISOString().slice(0,16); showEditor(); }
-        
-        function showEditor() { 
-            document.body.classList.add('modal-open'); 
-            editorBackdrop.classList.remove('opacity-0', 'pointer-events-none'); 
-            editorBackdrop.classList.add('opacity-100', 'pointer-events-auto'); 
+        function deleteActiveJournal() {
+            showConfirm("Eliminare l'intero diario e tutte le sue pagine?", () => {
+                journals = journals.filter(j => j.id !== activeJournalId);
+                activeJournalId = journals[0]?.id || null;
+                saveData(); renderApp();
+            });
+        }
+
+        function openNewPage() {
+            const journal = journals.find(j => j.id === activeJournalId);
+            if (!journal) return;
+            const id = Date.now().toString();
+            journal.pages.push({ id, title: '', content: '', timestamp: Date.now() });
+            openPage(id);
+        }
+        function openPage(id) {
+            currentPageId = id;
+            const p = journals.find(j => j.id === activeJournalId).pages.find(pg => pg.id === id);
+            editorTitle.value = p.title;
+            editorContent.value = p.content;
+            editorDatetime.value = new Date(p.timestamp - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            showEditor();
+        }
+
+        function showEditor() {
+            document.body.classList.add('modal-open');
+            editorBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            editorBackdrop.classList.add('opacity-100', 'pointer-events-auto');
             editorContainer.classList.remove('scale-95');
             editorContainer.classList.add('scale-100');
+            setTimeout(() => editorContent.focus(), 150);
         }
-        
-        function closeEditor() { 
-            document.body.classList.remove('modal-open'); 
-            editorBackdrop.classList.remove('opacity-100', 'pointer-events-auto'); 
-            editorBackdrop.classList.add('opacity-0', 'pointer-events-none'); 
+        function closeEditor() {
+            document.body.classList.remove('modal-open');
+            editorBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            editorBackdrop.classList.add('opacity-0', 'pointer-events-none');
             editorContainer.classList.remove('scale-100');
             editorContainer.classList.add('scale-95');
-            cleanEmptyPages(); 
-            currentPageId = null; 
+            cleanEmptyPages();
+            currentPageId = null;
         }
 
-        // Il Listener per chiudere la modale cliccando sullo sfondo
-        editorBackdrop.addEventListener('click', (e) => {
-            if (e.target === editorBackdrop) {
-                closeEditor();
+        editorBackdrop.addEventListener('click', (e) => { if (e.target === editorBackdrop) closeEditor(); });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('custom-modal-backdrop').classList.contains('opacity-100')) {
+                    document.getElementById('modal-cancel').onclick();
+                } else if (editorBackdrop.classList.contains('opacity-100')) {
+                    closeEditor();
+                }
             }
         });
 
-        function deletePage(id) { const j = journals.find(j=>j.id===activeJournalId); j.pages = j.pages.filter(p=>p.id!==id); saveData(); renderApp(); }
+        function deletePage(id) {
+            const j = journals.find(j => j.id === activeJournalId);
+            j.pages = j.pages.filter(p => p.id !== id);
+            saveData(); renderApp();
+        }
         function triggerDeletePage(e) {
             e.stopPropagation();
-            showConfirm("Vuoi eliminare questa pagina?", () => {
-                deletePage(currentPageId);
-                closeEditor();
-            });
+            showConfirm("Vuoi eliminare questa pagina?", () => { deletePage(currentPageId); closeEditor(); });
         }
-        
-        function updatePage() { 
-            if(!currentPageId) return;
-            const p = journals.find(j=>j.id===activeJournalId).pages.find(pg=>pg.id===currentPageId);
-            p.title = editorTitle.value; p.content = editorContent.value; p.timestamp = new Date(editorDatetime.value).getTime();
+
+        function updatePage() {
+            if (!currentPageId) return;
+            const p = journals.find(j => j.id === activeJournalId).pages.find(pg => pg.id === currentPageId);
+            p.title = editorTitle.value;
+            p.content = editorContent.value;
+            p.timestamp = new Date(editorDatetime.value).getTime();
             saveData(); renderPagesGrid();
         }
-        editorTitle.oninput = updatePage; editorContent.oninput = updatePage; editorDatetime.onchange = updatePage;
-        
-        function cleanEmptyPages() { 
-            const j = journals.find(j=>j.id===activeJournalId); 
-            if(!j) return;
-            const initialLength = j.pages.length;
-            j.pages = j.pages.filter(p=> p.title.trim() || p.content.trim()); 
-            if(j.pages.length !== initialLength) { saveData(); renderPagesGrid(); }
+        editorTitle.oninput = updatePage;
+        editorContent.oninput = updatePage;
+        editorDatetime.onchange = updatePage;
+
+        function cleanEmptyPages() {
+            const j = journals.find(j => j.id === activeJournalId);
+            if (!j) return;
+            const before = j.pages.length;
+            j.pages = j.pages.filter(p => p.title.trim() || p.content.trim());
+            if (j.pages.length !== before) { saveData(); renderPagesGrid(); }
         }
 
-        function saveData() { localStorage.setItem('carodiario_data', JSON.stringify(journals)); localStorage.setItem('carodiario_active_id', activeJournalId); }
-        function escapeHTML(s) { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
-        
-        function showConfirm(m, cb) { 
-            document.getElementById('modal-message').innerText = m; 
-            confirmCallback = cb; 
+        function saveData() {
+            localStorage.setItem('carodiario_data', JSON.stringify(journals));
+            localStorage.setItem('carodiario_active_id', activeJournalId);
+        }
+
+        function escapeHTML(s) {
+            if (!s) return '';
+            return s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        function showConfirm(m, cb) {
+            document.getElementById('modal-message').innerText = m;
+            confirmCallback = cb;
             const modal = document.getElementById('custom-modal-backdrop');
-            modal.classList.remove('opacity-0', 'pointer-events-none'); 
-            modal.classList.add('opacity-100', 'pointer-events-auto'); 
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100', 'pointer-events-auto');
             document.getElementById('modal-box').classList.replace('scale-95', 'scale-100');
         }
-        
-        document.getElementById('modal-cancel').onclick = () => { 
+        document.getElementById('modal-cancel').onclick = () => {
             const modal = document.getElementById('custom-modal-backdrop');
-            modal.classList.remove('opacity-100', 'pointer-events-auto'); 
-            modal.classList.add('opacity-0', 'pointer-events-none'); 
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            modal.classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('modal-box').classList.replace('scale-100', 'scale-95');
         };
-        
-        document.getElementById('modal-confirm').onclick = () => { confirmCallback(); document.getElementById('modal-cancel').onclick(); };
+        document.getElementById('modal-confirm').onclick = () => {
+            if (confirmCallback) confirmCallback();
+            document.getElementById('modal-cancel').onclick();
+        };
 
-        // RISOLTO: Ora l'apertura di una nuova nota avviene SOLAMENTE se si clicca sullo sfondo della griglia principale,
-        // evitando conflitti con la chiusura del modale o dei menù a tendina.
+        // Click sulla griglia per nuova pagina
         pagesView.addEventListener('click', (e) => {
-            if (document.body.classList.contains('modal-open')) return; // Previene l'apertura se c'è un modale aperto
-            if (e.target.closest('.note-card')) return; // Previene l'apertura se si clicca su una nota esistente
-            
-            if (activeJournalId) {
-                openNewPage();
-            }
+            if (document.body.classList.contains('modal-open')) return;
+            if (e.target.closest('.note-card')) return;
+            if (activeJournalId) openNewPage();
         });
 
         renderApp();
