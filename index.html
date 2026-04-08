@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="it">
+<script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+</script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>carodiar.io</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Abilita il toggle manuale del tema
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        card: '#1e1e1e',
+                        cardHover: '#2a2a2a',
+                        lightBg: '#f9fafb',
+                    },
+                    fontFamily: {
+                        sans: ['"Fira Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+                        serif: ['"Instrument Serif"', 'Georgia', 'Cambria', 'serif'],
+                        playfair: ['"Playfair Display"', 'Georgia', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Personalizzazione UI globale */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        body.modal-open { overflow: hidden; }
+        
+        /* Dropdown Animation */
+        #journal-dropdown {
+            transform-origin: top center;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .dropdown-hidden {
+            transform: scale(0.95) translateY(-10px) translateX(-50%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .dropdown-visible {
+            transform: scale(1) translateY(0) translateX(-50%);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Gestione icona calendario nativa per input datetime */
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+        html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
+    </style>
+</head>
+<body class="bg-lightBg dark:bg-dark text-gray-800 dark:text-gray-200 font-sans antialiased h-screen flex flex-col overflow-hidden transition-colors duration-300" id="main-body">
+
+    <header class="grid grid-cols-3 items-center px-6 py-4 md:px-12 border-b border-gray-200 dark:border-gray-800 z-30 shrink-0 bg-white/80 dark:bg-dark/80 backdrop-blur-md transition-colors duration-300">
+        
+        <div class="flex items-center">
+            <div class="text-2xl md:text-3xl font-serif tracking-wide lowercase select-none pb-1">
+                <span class="text-gray-900 dark:text-gray-100">caro</span><span class="text-gray-400 dark:text-gray-500">diar.io</span>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-center relative">
+            <div id="title-view" class="flex items-center gap-1 md:gap-2">
+                <button id="dropdown-toggle" class="text-lg md:text-xl font-bold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1 rounded-lg focus:outline-none" onclick="toggleDropdown(event)">
+                    <span id="current-title-text" class="truncate max-w-[120px] md:max-w-[300px]">Diario Vuoto</span>
+                    <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                
+                <div class="flex items-center">
+                    <button id="edit-title-btn" onclick="startEditingTitle()" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors hidden" title="Modifica titolo">
+                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                    <button onclick="createNewJournal()" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors" title="Crea nuovo diario">
+                        <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="title-edit" class="hidden items-center">
+                <input type="text" id="title-input" class="bg-transparent text-lg md:text-xl font-bold text-gray-900 dark:text-white outline-none border-b-2 border-gray-300 focus:border-gray-900 dark:border-gray-600 dark:focus:border-white w-[150px] md:w-[250px] text-center" placeholder="Nome diario...">
+            </div>
+
+            <div id="journal-dropdown" class="absolute top-full left-1/2 mt-3 w-64 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl flex-col z-50 dropdown-hidden">
+                <div class="px-4 py-3 text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">I TUOI DIARI</div>
+                <ul id="journal-list" class="max-h-60 overflow-y-auto p-2 space-y-1"></ul>
+                <div id="dropdown-delete-section" class="border-t border-gray-100 dark:border-gray-700 p-2 hidden">
+                    <button onclick="deleteActiveJournal()" class="w-full text-left px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Elimina questo diario
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 md:gap-6 text-sm text-gray-500">
+            <div class="hidden md:flex gap-4">
+                <button onclick="exportData()" class="hover:text-gray-900 dark:hover:text-white transition-colors">Esporta</button>
+                <label class="hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer">
+                    Importa <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+                </label>
+            </div>
+            <button onclick="toggleTheme()" class="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors" title="Cambia tema">
+                <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main id="pages-view" class="flex-grow p-8 md:p-12 w-full overflow-y-auto cursor-default relative transition-colors duration-300">
+    </main>
+
+    <div id="no-journals-hint" class="fixed inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600 text-lg pointer-events-none hidden z-0">
+        Clicca sul '+' in alto per creare un diario.
+    </div>
+    <div id="empty-journal-hint" class="fixed inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600 text-lg pointer-events-none hidden z-0 mt-20">
+        Diario vuoto.<br>Clicca in uno spazio vuoto per aggiungere una pagina.
+    </div>
+
+    <div id="editor-backdrop" class="fixed inset-0 bg-black/20 dark:bg-black/80 backdrop-blur-sm z-40 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="editor-container" class="bg-white dark:bg-dark border border-gray-200 dark:border-gray-800 w-full max-w-2xl h-[75vh] rounded-2xl flex flex-col p-6 md:p-10 shadow-2xl transform scale-95 transition-all duration-300 relative">
+            
+            <div class="absolute top-5 right-5 flex gap-4">
+                <button id="editor-delete-btn" class="text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-full transition-colors" title="Elimina pagina">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex flex-col flex-grow">
+                <div class="mb-3">
+                    <input type="datetime-local" id="editor-datetime" class="bg-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition-colors font-medium text-xs md:text-sm outline-none cursor-pointer border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 pb-1">
+                </div>
+                
+                <input type="text" id="editor-title" placeholder="Titolo della pagina..." class="bg-transparent border-none text-gray-900 dark:text-accent font-serif text-3xl md:text-4xl outline-none mb-6 w-full placeholder-gray-300 dark:placeholder-gray-700 py-1">
+                <textarea id="editor-content" placeholder="Inizia a scrivere..." class="bg-transparent border-none text-gray-700 dark:text-gray-300 font-normal text-xl md:text-2xl leading-[1.7] outline-none resize-none flex-grow w-full placeholder-gray-300 dark:placeholder-gray-700 font-playfair"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-modal-backdrop" class="fixed inset-0 bg-black/30 dark:bg-black/90 z-50 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white dark:bg-card p-8 rounded-xl text-center max-w-sm w-full border border-gray-200 dark:border-gray-700 shadow-2xl transform scale-95 transition-all duration-200" id="modal-box">
+            <p id="modal-message" class="text-base text-gray-800 dark:text-gray-200 mb-6">Sei sicuro?</p>
+            <div class="flex justify-center gap-4">
+                <button id="modal-cancel" class="px-5 py-2 text-sm rounded-lg font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Annulla</button>
+                <button id="modal-confirm" class="px-5 py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg shadow-red-900/20 dark:shadow-red-900/50">Conferma</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GESTIONE TEMA CHIARO/SCURO ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // --- STATO DELL'APP ---
+        let journals = JSON.parse(localStorage.getItem('carodiario_data')) || [];
+        let activeJournalId = localStorage.getItem('carodiario_active_id') || null;
+        let currentPageId = null;
+        let confirmCallback = null;
+
+        // --- ELEMENTI DOM ---
+        const mainBody = document.getElementById('main-body');
+        const pagesView = document.getElementById('pages-view');
+        const titleView = document.getElementById('title-view');
+        const titleEdit = document.getElementById('title-edit');
+        const currentTitleText = document.getElementById('current-title-text');
+        const titleInput = document.getElementById('title-input');
+        const editTitleBtn = document.getElementById('edit-title-btn');
+        const dropdownMenu = document.getElementById('journal-dropdown');
+        const journalListEl = document.getElementById('journal-list');
+        const dropdownDeleteSection = document.getElementById('dropdown-delete-section');
+        const noJournalsHint = document.getElementById('no-journals-hint');
+        const emptyJournalHint = document.getElementById('empty-journal-hint');
+        const editorBackdrop = document.getElementById('editor-backdrop');
+        const editorContainer = document.getElementById('editor-container');
+        const editorDatetime = document.getElementById('editor-datetime');
+        const editorTitle = document.getElementById('editor-title');
+        const editorContent = document.getElementById('editor-content');
+        const editorDeleteBtn = document.getElementById('editor-delete-btn');
+        const modalBackdrop = document.getElementById('custom-modal-backdrop');
+        const modalBox = document.getElementById('modal-box');
+
+        window.onload = () => {
+            if (journals.length === 0) activeJournalId = null;
+            if (activeJournalId && !journals.find(j => j.id === activeJournalId)) {
+                activeJournalId = journals.length > 0 ? journals[0].id : null;
+            }
+            renderApp();
+        };
+
+        function renderApp() {
+            renderHeader();
+            renderPagesGrid();
+        }
+
+        // --- HEADER & DROPDOWN ---
+        function renderHeader() {
+            if (!activeJournalId || journals.length === 0) {
+                currentTitleText.innerText = "Nessun Diario";
+                editTitleBtn.classList.add('hidden'); 
+                dropdownDeleteSection.classList.add('hidden');
+            } else {
+                const journal = journals.find(j => j.id === activeJournalId);
+                currentTitleText.innerText = journal.title || 'Senza Titolo';
+                editTitleBtn.classList.remove('hidden'); 
+                dropdownDeleteSection.classList.remove('hidden');
+            }
+
+            journalListEl.innerHTML = '';
+            const sortedJournals = [...journals].sort((a, b) => b.timestamp - a.timestamp);
+            
+            if (sortedJournals.length === 0) {
+                journalListEl.innerHTML = '<li class="px-3 py-2 text-sm text-gray-400 dark:text-gray-600 italic text-center">Nessun diario presente</li>';
+            } else {
+                sortedJournals.forEach(journal => {
+                    const li = document.createElement('li');
+                    const isActive = journal.id === activeJournalId;
+                    
+                    li.innerText = journal.title || 'Senza Titolo';
+                    li.className = `px-3 py-2 rounded-lg cursor-pointer transition-colors truncate text-sm font-medium ${isActive ? 'bg-gray-900 text-white dark:bg-gray-800' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200'}`;
+                    
+                    li.onclick = (e) => {
+                        e.stopPropagation();
+                        selectJournal(journal.id);
+                        closeDropdown();
+                    };
+                    journalListEl.appendChild(li);
+                });
+            }
+        }
+
+        function toggleDropdown(e) {
+            e.stopPropagation();
+            if (dropdownMenu.classList.contains('dropdown-hidden')) {
+                dropdownMenu.classList.remove('dropdown-hidden');
+                dropdownMenu.classList.add('dropdown-visible');
+            } else {
+                closeDropdown();
+            }
+        }
+
+        function closeDropdown() {
+            dropdownMenu.classList.add('dropdown-hidden');
+            dropdownMenu.classList.remove('dropdown-visible');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!dropdownMenu.contains(e.target) && !e.target.closest('#dropdown-toggle')) {
+                closeDropdown();
+            }
+        });
+
+        function startEditingTitle() {
+            if (!activeJournalId) return;
+            const journal = journals.find(j => j.id === activeJournalId);
+            
+            titleView.classList.add('hidden');
+            titleEdit.classList.remove('hidden');
+            titleEdit.classList.add('flex');
+            
+            titleInput.value = journal.title;
+            titleInput.focus();
+            titleInput.select();
+        }
+
+        function saveEditingTitle() {
+            if (!activeJournalId) return;
+            const journal = journals.find(j => j.id === activeJournalId);
+            
+            journal.title = titleInput.value.trim() || 'Senza Titolo';
+            saveData();
+            
+            titleEdit.classList.add('hidden');
+            titleEdit.classList.remove('flex');
+            titleView.classList.remove('hidden');
+            
+            renderHeader();
+        }
+
+        titleInput.addEventListener('blur', saveEditingTitle);
+        titleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveEditingTitle();
+            if (e.key === 'Escape') {
+                titleEdit.classList.add('hidden');
+                titleEdit.classList.remove('flex');
+                titleView.classList.remove('hidden');
+            }
+        });
+
+        // --- GESTIONE DIARI ---
+        function createNewJournal() {
+            const newId = Date.now().toString();
+            const newJournal = {
+                id: newId,
+                title: 'Nuovo Diario',
+                timestamp: Date.now(),
+                pages: []
+            };
+            journals.push(newJournal);
+            activeJournalId = newId;
+            saveData();
+            renderApp();
+            
+            setTimeout(startEditingTitle, 50);
+        }
+
+        function selectJournal(id) {
+            activeJournalId = id;
+            saveData();
+            renderApp();
+        }
+
+        function deleteActiveJournal() {
+            if (!activeJournalId) return;
+            closeDropdown();
+            showConfirm("Vuoi eliminare il diario e TUTTE le sue pagine?", () => {
+                journals = journals.filter(j => j.id !== activeJournalId);
+                activeJournalId = journals.length > 0 ? journals[0].id : null;
+                saveData();
+                renderApp();
+            });
+        }
+
+        // --- GRIGLIA PAGINE ---
+        pagesView.addEventListener('click', (e) => {
+            if (editorBackdrop.classList.contains('opacity-100') || modalBackdrop.classList.contains('opacity-100')) return;
+            if (e.target.closest('.note-card')) return;
+            
+            if (activeJournalId) {
+                openNewPage();
+            }
+        });
+
+        function renderPagesGrid() {
+            pagesView.innerHTML = '';
+
+            if (journals.length === 0) {
+                noJournalsHint.classList.remove('hidden');
+                emptyJournalHint.classList.add('hidden');
+                return;
+            }
+
+            noJournalsHint.classList.add('hidden');
+            const journal = journals.find(j => j.id === activeJournalId);
+
+            if (!journal || !journal.pages || journal.pages.length === 0) {
+                emptyJournalHint.classList.remove('hidden');
+                return;
+            }
+
+            emptyJournalHint.classList.add('hidden');
+            
+            const sortedPages = [...journal.pages].sort((a, b) => b.timestamp - a.timestamp);
+            let currentDateString = '';
+            let currentGrid = null;
+
+            const gridContainer = document.createElement('div');
+            gridContainer.className = "max-w-6xl mx-auto w-full pb-12";
+            pagesView.appendChild(gridContainer);
+
+            sortedPages.forEach(page => {
+                const dateObj = new Date(page.timestamp);
+                const dateStr = dateObj.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+                const timeStr = dateObj.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+                if (dateStr !== currentDateString) {
+                    const dateHeader = document.createElement('h2');
+                    dateHeader.className = 'w-full text-lg md:text-xl font-light text-gray-500 dark:text-gray-500 mt-6 mb-4 border-b border-gray-200 dark:border-gray-800 pb-2 tracking-wide';
+                    dateHeader.innerText = dateStr;
+                    gridContainer.appendChild(dateHeader);
+
+                    currentGrid = document.createElement('div');
+                    currentGrid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5';
+                    gridContainer.appendChild(currentGrid);
+
+                    currentDateString = dateStr;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'note-card bg-white dark:bg-card border border-gray-100 dark:border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-200 rounded-2xl p-5 h-48 flex flex-col cursor-pointer group shadow-sm hover:shadow-lg relative';
+                card.onclick = (e) => {
+                    e.stopPropagation(); 
+                    openPage(page.id);
+                };
+
+                const headerHTML = `
+                    <div class="font-serif text-lg md:text-xl mb-1 text-gray-900 dark:text-gray-200 truncate pt-1 pb-1">${page.title || 'Senza Titolo'}</div>
+                    <div class="text-gray-600 dark:text-gray-400 font-normal text-base leading-[1.6] flex-grow overflow-hidden line-clamp-4 font-playfair pb-1">${escapeHTML(page.content) || '<span class="opacity-40 font-sans italic">Pagina vuota...</span>'}</div>
+                    <div class="mt-3 flex justify-between items-center text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100 dark:border-gray-800 pt-3 font-sans">
+                        <span class="flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            ${timeStr}
+                        </span>
+                        <button class="delete-card-btn opacity-0 group-hover:opacity-100 p-1.5 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-full transition-all" title="Elimina">
+                            <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                card.innerHTML = headerHTML;
+
+                const deleteBtn = card.querySelector('.delete-card-btn');
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showConfirm("Vuoi eliminare questa pagina?", () => deletePage(page.id));
+                };
+
+                currentGrid.appendChild(card);
+            });
+        }
+
+        // --- LOGICA EDITOR ---
+        function getLocalIsoString(timestamp) {
+            const date = new Date(timestamp);
+            const tzoffset = date.getTimezoneOffset() * 60000;
+            return (new Date(date - tzoffset)).toISOString().slice(0, 16);
+        }
+
+        function openNewPage() {
+            const journal = journals.find(j => j.id === activeJournalId);
+            if (!journal) return;
+
+            const now = Date.now();
+            const newPage = {
+                id: now.toString(),
+                title: '',
+                content: '',
+                timestamp: now
+            };
+
+            journal.pages.push(newPage);
+            currentPageId = newPage.id;
+            
+            editorTitle.value = '';
+            editorContent.value = '';
+            editorDatetime.value = getLocalIsoString(now);
+            
+            saveData();
+            renderPagesGrid(); 
+            showEditor();
+        }
+
+        function openPage(pageId) {
+            const journal = journals.find(j => j.id === activeJournalId);
+            if (!journal) return;
+            
+            const page = journal.pages.find(p => p.id === pageId);
+            if (page) {
+                currentPageId = page.id;
+                editorTitle.value = page.title;
+                editorContent.value = page.content;
+                editorDatetime.value = getLocalIsoString(page.timestamp);
+                showEditor();
+            }
+        }
+
+        function saveCurrentPage() {
+            if (!currentPageId || !activeJournalId) return;
+            const journal = journals.find(j => j.id === activeJournalId);
+            if (!journal) return;
+
+            const pageIndex = journal.pages.findIndex(p => p.id === currentPageId);
+            if (pageIndex > -1) {
+                journal.pages[pageIndex].title = editorTitle.value;
+                journal.pages[pageIndex].content = editorContent.value;
+                
+                const newTimestamp = new Date(editorDatetime.value).getTime();
+                if (!isNaN(newTimestamp)) {
+                    journal.pages[pageIndex].timestamp = newTimestamp;
+                }
+
+                saveData();
+                renderPagesGrid(); 
+            }
+        }
+
+        editorTitle.addEventListener('input', saveCurrentPage);
+        editorContent.addEventListener('input', saveCurrentPage);
+        editorDatetime.addEventListener('change', saveCurrentPage);
+
+        editorDeleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showConfirm("Vuoi eliminare questa pagina?", () => {
+                deletePage(currentPageId);
+                closeEditor();
+            });
+        });
+
+        function deletePage(pageId) {
+            const journal = journals.find(j => j.id === activeJournalId);
+            if (journal) {
+                journal.pages = journal.pages.filter(p => p.id !== pageId);
+                saveData();
+                renderPagesGrid();
+            }
+        }
+
+        function showEditor() {
+            document.body.classList.add('modal-open');
+            editorBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            editorBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+            editorContainer.classList.remove('scale-95');
+            editorContainer.classList.add('scale-100');
+            setTimeout(() => {
+                editorContent.focus();
+                editorContent.setSelectionRange(editorContent.value.length, editorContent.value.length);
+            }, 50);
+        }
+
+        function closeEditor() {
+            document.body.classList.remove('modal-open');
+            editorBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            editorBackdrop.classList.add('opacity-0', 'pointer-events-none');
+            editorContainer.classList.remove('scale-100');
+            editorContainer.classList.add('scale-95');
+            
+            cleanEmptyPages();
+            currentPageId = null;
+        }
+
+        editorBackdrop.addEventListener('click', (e) => {
+            if (e.target === editorBackdrop) {
+                e.stopPropagation(); 
+                closeEditor();
+            }
+        });
+
+        function cleanEmptyPages() {
+            if (!activeJournalId) return;
+            const journal = journals.find(j => j.id === activeJournalId);
+            if (!journal) return;
+
+            const initialLength = journal.pages.length;
+            journal.pages = journal.pages.filter(p => p.title.trim() !== '' || p.content.trim() !== '');
+            if (journal.pages.length !== initialLength) {
+                saveData();
+                renderPagesGrid();
+            }
+        }
+
+        // --- SALVATAGGIO & EXPORT/IMPORT ---
+        function saveData() {
+            localStorage.setItem('carodiario_data', JSON.stringify(journals));
+            if (activeJournalId) localStorage.setItem('carodiario_active_id', activeJournalId);
+            else localStorage.removeItem('carodiario_active_id');
+        }
+
+        function exportData() {
+            if (journals.length === 0) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(journals, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "carodiario_backup.json");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        showConfirm("L'importazione sovrascriverà tutti i tuoi dati attuali. Procedere?", () => {
+                            journals = importedData;
+                            activeJournalId = journals.length > 0 ? journals[0].id : null;
+                            saveData();
+                            renderApp();
+                        });
+                    }
+                } catch (error) {
+                    alert("File non valido.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // --- SISTEMA UI ---
+        function showConfirm(message, onConfirmCallback) {
+            document.getElementById('modal-message').innerText = message;
+            confirmCallback = onConfirmCallback;
+            modalBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            modalBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+            modalBox.classList.remove('scale-95');
+            modalBox.classList.add('scale-100');
+        }
+
+        function closeConfirm() {
+            modalBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            modalBackdrop.classList.add('opacity-0', 'pointer-events-none');
+            modalBox.classList.remove('scale-100');
+            modalBox.classList.add('scale-95');
+            confirmCallback = null;
+        }
+
+        document.getElementById('modal-cancel').addEventListener('click', (e) => { e.stopPropagation(); closeConfirm(); });
+        document.getElementById('modal-confirm').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirmCallback) confirmCallback();
+            closeConfirm();
+        });
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
+        }
+    </script>
+</body>
+</html>
