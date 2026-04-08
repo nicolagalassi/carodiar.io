@@ -379,7 +379,7 @@
             });
         }
 
-        async function saveToDrive() {
+        async function saveToDrive(silent = false) {
             const indicator = document.getElementById('cloud-status-indicator');
             indicator.classList.add('syncing');
             try {
@@ -427,12 +427,20 @@
                 }
 
                 updateCloudUI(true);
-                showToast('Backup salvato su Google Drive ✓');
+                if (!silent) showToast('Backup salvato su Google Drive ✓');
+                else showCloudSynced();
             } catch (e) {
                 console.error('saveToDrive error:', e);
                 updateCloudUI(!!localStorage.getItem('gdrive_token'));
-                showToast('Errore nel backup. Riprova o rifai il login.', true);
+                if (!silent) showToast('Errore nel backup. Riprova o rifai il login.', true);
             }
+        }
+
+        function showCloudSynced() {
+            const dot = document.getElementById('cloud-status-indicator');
+            dot.classList.remove('syncing');
+            dot.style.backgroundColor = '#10b981';
+            setTimeout(() => { dot.style.backgroundColor = ''; }, 1000);
         }
 
         async function loadFromDrive() {
@@ -673,6 +681,7 @@
                 journals = journals.filter(j => j.id !== activeJournalId);
                 activeJournalId = journals[0]?.id || null;
                 saveData(); renderApp();
+                immediateAutoBackup();
             });
         }
 
@@ -713,6 +722,7 @@
             applyEditorColor(color);
             saveData();
             renderPagesGrid();
+            immediateAutoBackup();
         }
 
         function showEditor() {
@@ -751,6 +761,7 @@
             const j = journals.find(j => j.id === activeJournalId);
             j.pages = j.pages.filter(p => p.id !== id);
             saveData(); renderApp();
+            immediateAutoBackup();
         }
         function triggerDeletePage(e) {
             e.stopPropagation();
@@ -764,6 +775,7 @@
             p.content = editorContent.value;
             p.timestamp = new Date(editorDatetime.value).getTime();
             saveData(); renderPagesGrid();
+            scheduleAutoBackup();
         }
         editorTitle.oninput = updatePage;
         editorContent.oninput = updatePage;
@@ -774,12 +786,45 @@
             if (!j) return;
             const before = j.pages.length;
             j.pages = j.pages.filter(p => p.title.trim() || p.content.trim());
-            if (j.pages.length !== before) { saveData(); renderPagesGrid(); }
+            if (j.pages.length !== before) { saveData(); renderPagesGrid(); immediateAutoBackup(); }
         }
 
         function saveData() {
             localStorage.setItem('carodiario_data', JSON.stringify(journals));
             localStorage.setItem('carodiario_active_id', activeJournalId);
+        }
+
+        /** ==============================
+         *  AUTO-BACKUP SU GOOGLE DRIVE
+         * ============================== */
+        let autoBackupDebounceTimer = null;
+
+        function isCloudConnected() {
+            const token = localStorage.getItem('gdrive_token');
+            const exp   = localStorage.getItem('gdrive_token_expires');
+            return !!(token && exp && Date.now() < parseInt(exp));
+        }
+
+        // Backup con debounce — usato durante la digitazione (ritardo 3s)
+        function scheduleAutoBackup() {
+            if (!isCloudConnected()) return;
+            clearTimeout(autoBackupDebounceTimer);
+            setCloudIndicatorSyncing();
+            autoBackupDebounceTimer = setTimeout(() => {
+                saveToDrive(true);
+            }, 3000);
+        }
+
+        // Backup immediato — usato per azioni strutturali (elimina, nuova nota, colore…)
+        function immediateAutoBackup() {
+            if (!isCloudConnected()) return;
+            clearTimeout(autoBackupDebounceTimer);
+            saveToDrive(true);
+        }
+
+        function setCloudIndicatorSyncing() {
+            const dot = document.getElementById('cloud-status-indicator');
+            dot.classList.add('syncing');
         }
 
         function escapeHTML(s) {
